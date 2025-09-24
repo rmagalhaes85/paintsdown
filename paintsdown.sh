@@ -2,28 +2,30 @@
 
 set -eu
 set -o pipefail
-set -x
+#set -x
 
 trap cleanup EXIT
 
 tempdir_suffix=".paintsdown"
 tempdir_name=""
 input_file=""
-output_file="output.pdf"
+output_file=""
+force_output=0
 color_to_use="magenta"
 density="300"
-keep_temp=1 #TODO make it configurable via command line parameter
+verbose=0
+keep_temp=0
 
 cleanup() {
-	echo "cleanup"
+	local original_retval="$?"
 	[ "$keep_temp" -eq 1 ] && return
 	[ -n "$tempdir_name" ] && rm -rf "$tempdir_name"
+	exit $original_retval
 }
 
 # creates tempdir and sets $tempdir_name variable. This variable will be used by the
 # `cleanup` function to remove all the temp files at the end of execution
 create_tempdir() {
-	echo "create_tempdir"
 	tempdir_name=$(mktemp -d --suffix="$tempdir_suffix")
 	[ $? -eq 0 ] || error "Error creating temp directory"
 }
@@ -34,12 +36,21 @@ create_cmy_pages() {
 	# account for documents containing pages in different sizes
 	local empty_channel_file="${tempdir_name}/empty_black.png"
 	local cyan="empty_channel_file"
+	local yellow="empty_channel_file"
 	local magenta="empty_channel_file"
 	if [ "$color_to_use" == "cyan" ]; then
 		cyan="black_channel"
 	fi;
 	if [ "$color_to_use" == "magenta" ]; then
 		magenta="black_channel"
+	fi;
+	if [ "$color_to_use" == "red" ]; then
+		magenta="black_channel"
+		yellow="black_channel"
+	fi;
+	if [ "$color_to_use" == "green" ]; then
+		cyan="black_channel"
+		yellow="black_channel"
 	fi;
 	convert $(ls "${tempdir_name}"/channel_k*.tiff | head -1) -density "$density" \
 		-evaluate set 0% -negate "$empty_channel_file"
@@ -48,7 +59,7 @@ create_cmy_pages() {
 		processed_page_file="${processed_page_file%.tiff}.png"
 		convert "${!cyan}" \
 			"${!magenta}" \
-			"$empty_channel_file" \
+			"${!yello}" \
 			"$empty_channel_file" \
 			-combine -colorspace CMYK "$processed_page_file"
 	done;
@@ -69,14 +80,22 @@ display_success_message() {
 
 # display error message and die
 error() {
-	echo "$1" >&2
+	 >&2 echo "error: $1"
 	exit 1
+}
+
+verbose() {
+	[ "$verbose" -eq 1 ] && echo "$1"
 }
 
 # make sure dependencies are installed
 validate_deps() {
-	# check pdftk, convert, img2pdf
+	# check pdftk, convert, img2pdf, pdftoppm
 	echo "validate_deps"
+}
+
+print_usage() {
+	echo "Usage:"
 }
 
 # function `get_suffixed_filename`
@@ -122,16 +141,71 @@ apply_ocr() {
 	echo "apply_ocr"
 }
 
-process_args() {
-	[ -z "$1" ] && error "no input file"
-	[ -r "$1" ] || error "input file $1 doesn't exist or isn't readable"
-	input_file="$1"
+parse_args() {
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-h|--help)
+				print_usage
+				exit 0
+				;;
+			-v|--verbose)
+				verbose=1
+				shift
+				;;
+			-f|--force)
+				force_output=1
+				shift
+				;;
+			-k|--keep-temp)
+				keep_temp=1
+				shift
+				;;
+			-c|--color)
+				if [[ $# -lt 2 || "$2" =~ ^- ]]; then
+					error "option $1 requires a color"
+				fi
+				case "$2" in
+					magenta|cyan|red|green)
+						color_to_use="$2"
+						;;
+					*)
+						error "invalid color. Supported colors are 'magenta', 'cyan', 'red', and 'green' only"
+						;;
+				esac
+				shift 2
+				;;
+			-i|--input)
+				if [[ $# -lt 2 || "$2" =~ ^- ]]; then
+					error "option $1 requires a filename"
+				fi
+				input_file="$2"
+				shift 2
+				;;
+			-o|--output)
+				if [[ $# -lt 2 || "$2" =~ ^- ]]; then
+					error "option $1 requires a filename"
+				fi
+				output_file="$2"
+				shift 2
+				;;
+			*)
+				error "Unknown parameter $1"
+				exit 1
+				;;
+		esac
+	done
+
+	[ -z "$input_file" ] && error "input file not defined via option -i"
+	[ -r "$input_file" ] || error "input file $input_file doesn't exist or isn't readable"
+	[ -z "$output_file" ] && error "output file not defined via option -o"
+	[ "$input_file" == "$output_file" ] && error "using the same file as both input and output is not recomended"
+	[[ -r "$output_file" && "$force_output" -ne 1 ]] && error "output file $output_file already exists and --force is not specified"
 }
 
 main() {
 	echo "arguments: $@"
+	parse_args "$@"
 	validate_deps
-	process_args "$@"
 	create_tempdir
 	create_gray_pages
 	create_black_masks
@@ -141,7 +215,8 @@ main() {
 	display_success_message
 }
 
-main "$@"
+#main "$@"
+parse_args "$@"
 #get_suffixed_filename "/home/fool/input.pdf" "barl" "tiff"
 #create_gray_pages "/tmp/input.pdf" "gray"
 #create_tempdir
