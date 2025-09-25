@@ -2,7 +2,7 @@ PREFIX     ?= /opt
 APPNAME    := paintsdown
 INSTALLDIR := $(PREFIX)/$(APPNAME)
 BINDIR     := $(INSTALLDIR)/bin
-SYMLINKDIR := /usr/loca/bin
+SYMLINKDIR := /usr/local/bin
 
 SCRIPTS    := paintsdown.sh
 
