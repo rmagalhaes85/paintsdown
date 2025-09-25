@@ -227,7 +227,6 @@ parse_args() {
 }
 
 main() {
-	echo "arguments: $@"
 	parse_args "$@"
 	validate_deps
 	create_tempdir
