@@ -59,7 +59,7 @@ create_cmy_pages() {
 		processed_page_file="${processed_page_file%.tiff}.png"
 		convert "${!cyan}" \
 			"${!magenta}" \
-			"${!yello}" \
+			"${!yellow}" \
 			"$empty_channel_file" \
 			-combine -colorspace CMYK "$processed_page_file"
 	done;
