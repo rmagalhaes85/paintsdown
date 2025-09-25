@@ -164,14 +164,6 @@ create_black_masks() {
 	done;
 }
 
-# apply OCR over the final document. HOWEVER, ideally, we should use the same information
-# of the input document, instead of running an entire OCR pipeline over the processed
-# document -- all of that only to obtain an information we already have in the original,
-# input document!
-apply_ocr() {
-	echo "apply_ocr"
-}
-
 parse_args() {
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
@@ -242,7 +234,6 @@ main() {
 	create_black_masks
 	create_cmy_pages
 	concat_processed_pages
-	apply_ocr #optional?
 	display_success_message
 }
 
