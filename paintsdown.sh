@@ -237,8 +237,8 @@ main() {
 	display_success_message
 }
 
-#main "$@"
-parse_args "$@"
+main "$@"
+#parse_args "$@"
 #get_suffixed_filename "/home/fool/input.pdf" "barl" "tiff"
 #create_gray_pages "/tmp/input.pdf" "gray"
 #create_tempdir
