@@ -21,7 +21,11 @@ install:
 	@echo "$(APPNAME) installed. Try running '$(APPNAME) --help'"
 
 uninstall:
-	@echo "uninstall"
+	@echo "Removing symlink from $(SYMLINKDIR)"
+	sudo rm -f $(SYMLINKDIR)/$(APPNAME)
+	@echo "Removing installation directory $(INSTALLDIR)"
+	sudo rm -rf $(INSTALLDIR)
+	@echo "$(APPNAME) uninstalled"
 
 clean:
 	@echo "Nothing to clean"
