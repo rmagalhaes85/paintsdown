@@ -95,7 +95,38 @@ validate_deps() {
 }
 
 print_usage() {
-	echo "Usage:"
+    cat <<'EOF'
+Usage: paintsdown.sh -i <filename> -o <filename> [OPTIONS]
+
+Mandatory options:
+  -i, --input <filename>
+      Input file to be processed. Must be a valid filename.
+
+  -o, --output <filename>
+      Output file to generate. Must be a valid filename.
+
+Optional options:
+  -h, --help
+      Show this help message and exit.
+
+  -c, --color <magenta|cyan|red|green>
+      Select the color to use. Must be one of:
+      magenta, cyan, red, or green. Default is magenta
+
+  -v, --verbose
+      Enable verbose mode. Prints extra details during execution.
+
+  -f, --force
+      Overwrite the output file if it already exists.
+
+  -k, --keep-temp
+      Keep temporary files instead of deleting them after execution.
+
+Examples:
+  paintsdown.sh -i source.txt -o result.txt -c magenta
+  paintsdown.sh --input data.md --output out.html --color cyan --verbose
+  paintsdown.sh -f -i in.md -o out.md -c red
+EOF
 }
 
 # function `get_suffixed_filename`
