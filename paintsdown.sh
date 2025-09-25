@@ -222,7 +222,8 @@ parse_args() {
 	[ -f "$input_file" ] || error "input file $input_file doesn't exist or isn't a regular file"
 	[ -z "$output_file" ] && error "output file not defined via option -o"
 	[ "$input_file" == "$output_file" ] && error "using the same file as both input and output is not recomended"
-	[[ -r "$output_file" && "$force_output" -ne 1 ]] && error "output file $output_file already exists and --force is not specified"
+	[[ -f "$output_file" && "$force_output" -ne 1 ]] && error "output file $output_file already exists and --force is not specified"
+	return 0
 }
 
 main() {
