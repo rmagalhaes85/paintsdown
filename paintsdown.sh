@@ -6,8 +6,12 @@ set -o pipefail
 
 trap cleanup EXIT
 
+# auxiliary variables
+deps=("pdftk" "convert" "img2pdf" "pdftoppm")
 tempdir_suffix=".paintsdown"
 tempdir_name=""
+
+# command line arguments
 input_file=""
 output_file=""
 force_output=0
@@ -90,8 +94,12 @@ verbose() {
 
 # make sure dependencies are installed
 validate_deps() {
-	# check pdftk, convert, img2pdf, pdftoppm
-	echo "validate_deps"
+	for dep in "${deps[@]}"; do
+		set +e
+		which "$dep" > /dev/null
+		[ "$?" -ne 0 ] && error "dependency $dep was not found"
+		set -e
+	done;
 }
 
 print_usage() {
