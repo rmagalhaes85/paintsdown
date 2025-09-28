@@ -34,11 +34,20 @@ create_tempdir() {
 	[ $? -eq 0 ] || error "Error creating temp directory"
 }
 
+# generates an empty channel file with the same dimensions as the input file. This way, we
+# reuse empty channel files for pages with the same size in a given document
+get_black_channel_file_for_page() {
+	local channel_k_file="$1"
+	local dimensions=$(identify -format "%w_%h" "$channel_k_file")
+	local page_empty_channel_file="${tempdir_name}/empty_${dimensions}.png"
+	if [ ! -e "$page_empty_channel_file" ]; then
+		convert "$channel_k_file" -density "$density" \
+			-evaluate set 0% -negate "$page_empty_channel_file"
+	fi
+	echo "$page_empty_channel_file"
+}
+
 create_cmy_pages() {
-	# create a zeroed black mask
-	# TODO by using a single empty black mask for the whole document, we don't
-	# account for documents containing pages in different sizes
-	local empty_channel_file="${tempdir_name}/empty_black.png"
 	local cyan="empty_channel_file"
 	local yellow="empty_channel_file"
 	local magenta="empty_channel_file"
@@ -56,9 +65,8 @@ create_cmy_pages() {
 		cyan="black_channel"
 		yellow="black_channel"
 	fi;
-	convert $(ls "${tempdir_name}"/channel_k*.tiff | head -1) -density "$density" \
-		-evaluate set 0% -negate "$empty_channel_file"
 	for black_channel in ${tempdir_name}/channel_k*.tiff; do
+		local empty_channel_file=$(get_black_channel_file_for_page "$black_channel")
 		local processed_page_file=${black_channel/channel_k/cmy}
 		processed_page_file="${processed_page_file%.tiff}.png"
 		convert "${!cyan}" \
