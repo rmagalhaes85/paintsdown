@@ -113,6 +113,9 @@ Optional options:
       Select the color to use. Must be one of:
       magenta, cyan, red, or green. Default is magenta
 
+  -d, --density
+      Sets document's density (resolution), in DPI. Default is 300
+
   -v, --verbose
       Enable verbose mode. Prints extra details during execution.
 
@@ -195,6 +198,13 @@ parse_args() {
 						error "invalid color. Supported colors are 'magenta', 'cyan', 'red', and 'green' only"
 						;;
 				esac
+				shift 2
+				;;
+			-d|--density)
+				if [[ $# -lt 2 || "$2" =~ ^- ]]; then
+					error "option $1 requires a density value"
+				fi
+				density="$2"
 				shift 2
 				;;
 			-i|--input)
