@@ -112,7 +112,7 @@ validate_deps() {
 
 print_usage() {
     cat <<'EOF'
-Usage: paintsdown.sh -i <filename> -o <filename> [OPTIONS]
+Usage: paintsdown -i <filename> -o <filename> [OPTIONS]
 
 Mandatory options:
   -i, --input <filename>
@@ -142,9 +142,9 @@ Optional options:
       Keep temporary files instead of deleting them after execution.
 
 Examples:
-  paintsdown.sh -i source.txt -o result.txt -c magenta
-  paintsdown.sh --input data.md --output out.html --color cyan --verbose
-  paintsdown.sh -f -i in.md -o out.md -c red
+  paintsdown -i source.txt -o result.txt -c magenta
+  paintsdown --input data.md --output out.html --color cyan --verbose
+  paintsdown -f -i in.md -o out.md -c red
 EOF
 }
 
