@@ -18,9 +18,9 @@ keep_temp=0
 
 cleanup() {
 	local original_retval="$?"
-	[ "$keep_temp" -eq 1 ] && return
+	[ "$keep_temp" -eq 1 ] && return $original_retval
 	[ -n "$tempdir_name" ] && rm -rf "$tempdir_name"
-	exit $original_retval
+	return $original_retval
 }
 
 # creates tempdir and sets $tempdir_name variable. This variable will be used by the
