@@ -10,6 +10,7 @@ trap cleanup EXIT
 deps=("pdftk" "convert" "img2pdf" "pdftoppm")
 tempdir_suffix=".paintsdown"
 tempdir_name=""
+page_ranged_input_file=""
 
 # command line arguments
 input_file=""
@@ -19,6 +20,8 @@ color_to_use="magenta"
 density="300"
 verbose=0
 keep_temp=0
+first_page=""
+last_page=""
 
 cleanup() {
 	local original_retval="$?"
@@ -83,7 +86,8 @@ concat_processed_pages() {
 	local image_layer_output="$tempdir_name"/image-layer.output.pdf
 	img2pdf `ls -1 "$tempdir_name"/cmy*.png | sort -V` \
 		-o "$image_layer_output"
-	pdftk "$input_file" multistamp "$image_layer_output" output "$output_file"
+	pdftk "$page_ranged_input_file" multistamp "$image_layer_output" \
+		output "$output_file"
 }
 
 display_success_message() {
@@ -171,9 +175,32 @@ get_suffixed_filename() {
 	echo "${dirname}/${filename_noext}.""$2"".${extension}"
 }
 
+# create a temporary copy of the input file, limiting the range of its pages if necessary.
+# This copy is necessary because the last step of the pipeline (a pdftk multistamp
+# operation) doesn't allow us to select a page range -- therefore we must give it a
+# pdf with the right number of pages for it to operate upon
+create_page_ranged_input() {
+	page_ranged_input_file="${tempdir_name}/page_ranged_input.pdf"
+	local cat_first_page="1"
+	local cat_last_page="end"
+	if [ -n "$first_page" ]; then
+		cat_first_page=${first_page}
+	fi
+	if [ -n "$last_page" ]; then
+		cat_last_page=${last_page}
+	fi
+	if [[ -n "$first_page" || -n "$last_page" ]]; then
+		pdftk "$input_file" cat ${cat_first_page}-${cat_last_page} \
+			output "$page_ranged_input_file"
+	else
+		cp "$input_file" "$page_ranged_input_file"
+	fi
+}
+
 # create a grayscale version and save it in the tempdir
 create_gray_pages() {
-	pdftoppm -gray -r "$density" -png "$input_file" "${tempdir_name}/"gray
+	pdftoppm -gray -r "$density" -png "$page_ranged_input_file" \
+		"${tempdir_name}/"gray
 }
 
 create_black_masks() {
@@ -223,6 +250,20 @@ parse_args() {
 				density="$2"
 				shift 2
 				;;
+			--first)
+				if [[ $# -lt 2 || "$2" =~ ^- ]]; then
+					error "option $1 requires a page number"
+				fi
+				first_page="$2"
+				shift 2
+				;;
+			--last)
+				if [[ $# -lt 2 || "$2" =~ ^- ]]; then
+					error "option $1 requires a page number"
+				fi
+				last_page="$2"
+				shift 2
+				;;
 			-i|--input)
 				if [[ $# -lt 2 || "$2" =~ ^- ]]; then
 					error "option $1 requires a filename"
@@ -256,6 +297,7 @@ main() {
 	parse_args "$@"
 	validate_deps
 	create_tempdir
+	create_page_ranged_input
 	create_gray_pages
 	create_black_masks
 	create_cmy_pages
