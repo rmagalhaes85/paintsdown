@@ -33,15 +33,19 @@ cleanup() {
 # creates tempdir and sets $tempdir_name variable. This variable will be used by the
 # `cleanup` function to remove all the temp files at the end of execution
 create_tempdir() {
-	tempdir_name=$(mktemp -d --suffix="$tempdir_suffix")
-	[ $? -eq 0 ] || error "Error creating temp directory"
+	if ! tempdir_name=$(mktemp -d --suffix="$tempdir_suffix"); then
+		error "Error creating temp directory"
+	fi;
 }
 
 # generates an empty channel file with the same dimensions as the input file. This way, we
 # reuse empty channel files for pages with the same size in a given document
 get_black_channel_file_for_page() {
 	local channel_k_file="$1"
-	local dimensions=$(identify -format "%w_%h" "$channel_k_file")
+	local dimensions
+	if ! dimensions=$(identify -format "%w_%h" "$channel_k_file"); then
+		error "Could not read dimensions from file $channel_k_file"
+	fi
 	local page_empty_channel_file="${tempdir_name}/empty_${dimensions}.png"
 	if [ ! -e "$page_empty_channel_file" ]; then
 		convert "$channel_k_file" -density "$density" \
@@ -68,8 +72,9 @@ create_cmy_pages() {
 		cyan="black_channel"
 		yellow="black_channel"
 	fi;
-	for black_channel in ${tempdir_name}/channel_k*.tiff; do
-		local empty_channel_file=$(get_black_channel_file_for_page "$black_channel")
+	for black_channel in "${tempdir_name}"/channel_k*.tiff; do
+		local empty_channel_file
+		empty_channel_file=$(get_black_channel_file_for_page "$black_channel")
 		local processed_page_file=${black_channel/channel_k/cmy}
 		processed_page_file="${processed_page_file%.tiff}.png"
 		convert "${!cyan}" \
@@ -84,8 +89,10 @@ create_cmy_pages() {
 # working directory, alongside with the input document
 concat_processed_pages() {
 	local image_layer_output="$tempdir_name"/image-layer.output.pdf
-	img2pdf `ls -1 "$tempdir_name"/cmy*.png | sort -V` \
-		-o "$image_layer_output"
+	local cmy_images
+	readarray -t cmy_images < <(find \
+		"$tempdir_name" -type f -name 'cmy*.png' | sort -V)
+	img2pdf "${cmy_images[@]}" -o "$image_layer_output"
 	pdftk "$page_ranged_input_file" multistamp "$image_layer_output" \
 		output "$output_file"
 }
@@ -107,10 +114,9 @@ verbose() {
 # make sure dependencies are installed
 validate_deps() {
 	for dep in "${deps[@]}"; do
-		set +e
-		which "$dep" > /dev/null
-		[ "$?" -ne 0 ] && error "dependency $dep was not found"
-		set -e
+		if ! which "$dep" > /dev/null; then
+			error "dependency $dep was not found"
+		fi
 	done;
 }
 
@@ -163,12 +169,16 @@ EOF
 # $2: "barl"
 # Result: /home/fool/input.barl.pdf
 get_suffixed_filename() {
+	local basename
+	local dirname
+	local filename_noext
+	local extension
 	[ -z "$1" ] && error "get_suffixed_filename: no file name"
 	[ -z "$2" ] && error "get_suffixed_filename: no suffix"
-	local basename=$(basename "$1")
-	local filename_noext="${basename%.*}"
-	local dirname=$(dirname "$1")
-	local extension="${basename##*.}"
+	basename=$(basename "$1")
+	filename_noext="${basename%.*}"
+	dirname=$(dirname "$1")
+	extension="${basename##*.}"
 	if [ -n "$3" ]; then
 		extension="$3"
 	fi;
@@ -190,7 +200,7 @@ create_page_ranged_input() {
 		cat_last_page=${last_page}
 	fi
 	if [[ -n "$first_page" || -n "$last_page" ]]; then
-		pdftk "$input_file" cat ${cat_first_page}-${cat_last_page} \
+		pdftk "$input_file" cat "${cat_first_page}-${cat_last_page}" \
 			output "$page_ranged_input_file"
 	else
 		cp "$input_file" "$page_ranged_input_file"
@@ -205,7 +215,7 @@ create_gray_pages() {
 
 create_black_masks() {
 	#convert cmyk.tiff -channel K -separate k.png
-	for gray_page in ${tempdir_name}/gray-*.png; do
+	for gray_page in "${tempdir_name}"/gray-*.png; do
 		convert "$gray_page" -channel K -separate "${gray_page/gray/channel_k}.tiff"
 	done;
 }
