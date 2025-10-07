@@ -3,10 +3,10 @@ APPNAME    := paintsdown
 INSTALLDIR := $(PREFIX)/$(APPNAME)
 BINDIR     := $(INSTALLDIR)/bin
 SYMLINKDIR := /usr/local/bin
-
 SCRIPTS    := paintsdown.sh
+LINTFILE   := shellcheck.txt
 
-.PHONY: all install uninstall clean
+.PHONY: all install uninstall clean lint
 
 all:
 	@echo "Nothing to build. Run 'make install' to install $(APPNAME)"
@@ -29,4 +29,11 @@ uninstall:
 
 clean:
 	@echo "Nothing to clean"
+
+lint: $(SCRIPTS)
+	shellcheck $^ --format=gcc > $(LINTFILE)
+	@if [ $$? -eq 0 ]; then \
+		rm -rf $(LINTFILE); \
+		echo "No linting issues were found"; \
+	fi
 
